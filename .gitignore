@@ -1,5 +1,13 @@
 data/
+data/*
+data_aug/*
+og_data
+og_data/*
+models/
+models_training_all_dataset/
+diadem_data
 
+*.txt
 new_data/
 
 __pycache__/

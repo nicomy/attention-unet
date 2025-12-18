@@ -8,7 +8,27 @@ from utils.evaluation.helpers import show_predictions,display
 from utils.evaluation.mean_iou import mean_iou_score, mean_iou_score_ensemble
 
 
+import json
+import os 
 
+def log_results_json(path, fold, scores, model_name):
+    entry = {
+        "fold": fold,
+        "model": model_name,
+        "per_class_iou": scores["per_class_iou"],
+        "mean_iou": scores["mean_iou"]
+    }
+
+    if os.path.exists(path):
+        with open(path, "r") as f:
+            data = json.load(f)
+    else:
+        data = []
+
+    data.append(entry)
+
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
 
 def k_fold(X,y,fold, batch , epochs , lr  , n_splits ,show ):
 
@@ -24,10 +44,16 @@ def k_fold(X,y,fold, batch , epochs , lr  , n_splits ,show ):
     print()
     print()
 
-    np.random.seed(42)  #default 42
-    X = np.random.choice(X, size= len(X) , replace=False)
-    np.random.seed(42)  #default 42
-    y = np.random.choice(y, size= len(y)  , replace=False)
+    # np.random.seed(42)  #default 42
+    # X = np.random.choice(X, size= len(X) , replace=False)
+    # np.random.seed(42)  #default 42
+    # y = np.random.choice(y, size= len(y)  , replace=False)
+    np.random.seed(42)
+    indices = np.random.permutation(len(X))
+
+    X = X[indices]
+    y = y[indices]
+
 
     X = np.array_split(X, n_splits)
     y = np.array_split(y, n_splits)
@@ -43,10 +69,16 @@ def k_fold(X,y,fold, batch , epochs , lr  , n_splits ,show ):
     y_train = np.concatenate([y[l[i]] for i in range(0,len(l))], axis=0)
 
     np.random.seed(42)
-    X_val = np.random.choice(X_train, size= int(len(X_train)*0.1) , replace=False)
+    indices_val = np.random.permutation(int(len(X_train)*0.1))
 
-    np.random.seed(42)
-    y_val = np.random.choice(y_train, size= int(len(y_train)*0.1) , replace=False)
+    X_val = X_train[indices_val]
+    X_val = y_train[indices_val]
+
+    # np.random.seed(42)
+    # X_val = np.random.choice(X_train, size= int(len(X_train)*0.1) , replace=False)
+
+    # np.random.seed(42)
+    # X_val = np.random.choice(y_train, size= int(len(y_train)*0.1) , replace=False)
 
 
     X_test = X[fold]
@@ -131,7 +163,7 @@ def k_fold(X,y,fold, batch , epochs , lr  , n_splits ,show ):
 
             show_predictions(X_test_image_normal[i:i+1] , y_test_image_normal[i],model_arc_normal)
 
-    mean_iou_score(model_arc_normal,X_test_image_normal,y_test_image_normal,5)
+    l_score_normal =  mean_iou_score(model_arc_normal,X_test_image_normal,y_test_image_normal,5)
 
 
 
@@ -163,7 +195,7 @@ def k_fold(X,y,fold, batch , epochs , lr  , n_splits ,show ):
 
             show_predictions(X_test_image_HSV[i:i+1] , y_test_image_HSV[i],model_arc_HSV)
 
-    mean_iou_score(model_arc_HSV,X_test_image_HSV,y_test_image_HSV,5)
+    l_score_HSV =  mean_iou_score(model_arc_HSV,X_test_image_HSV,y_test_image_HSV,5)
 
 
 
@@ -194,7 +226,7 @@ def k_fold(X,y,fold, batch , epochs , lr  , n_splits ,show ):
 
             show_predictions(X_test_image_YUV[i:i+1] , y_test_image_YUV[i],model_arc_YUV)
 
-    mean_iou_score(model_arc_YUV,X_test_image_YUV,y_test_image_YUV,5)
+    l_score_YUV = mean_iou_score(model_arc_YUV,X_test_image_YUV,y_test_image_YUV,5)
 
 
 
@@ -235,7 +267,7 @@ def k_fold(X,y,fold, batch , epochs , lr  , n_splits ,show ):
 
             display([X_test_image_normal[i:i+1] ,y_test_image_normal[i] ,  weighted_ensemble_prediction[i].reshape(256,256,1)])
 
-    mean_iou_score_ensemble(weighted_ensemble_prediction,y_test_image_normal,n_classes = 5 )
+    l_score_ensemble_weigthed = mean_iou_score_ensemble(weighted_ensemble_prediction,y_test_image_normal,n_classes = 5 )
 
 
     un_weighted_preds = np.tensordot(preds, w, axes=((0),(0)))
@@ -255,5 +287,35 @@ def k_fold(X,y,fold, batch , epochs , lr  , n_splits ,show ):
 
             display([X_test_image_normal[i:i+1] ,y_test_image_normal[i] ,  un_weighted_ensemble_prediction[i].reshape(256,256,1)])
 
-    mean_iou_score_ensemble(un_weighted_ensemble_prediction ,y_test_image_normal,n_classes = 5 )
+    l_score_ensemble_unweigthed = mean_iou_score_ensemble(un_weighted_ensemble_prediction ,y_test_image_normal,n_classes = 5 )
 
+
+
+
+
+
+    path_model ="models/"
+    model_arc_normal.save(path_model+"unet_normal_fold{}.h5".format(fold))
+    model_arc_HSV.save(path_model+"unet_hsv_fold{}.h5".format(fold))
+    model_arc_YUV.save(path_model+"unet_yuv_fold{}.h5".format(fold))
+
+    model_arc_normal.save_weights(f"models/unet_fold_{fold}.weights.h5")
+    model_arc_HSV.save_weights(f"models/unet_fold_{fold}.weights.h5")
+    model_arc_YUV.save_weights(f"models/unet_fold_{fold}.weights.h5")
+
+    file = "results.txt"
+    print(l_score_normal)
+    log_results_json(path_model+file,fold,l_score_normal,"normal")
+    log_results_json(path_model+file,fold,l_score_HSV,"HSV")
+    log_results_json(path_model+file,fold,l_score_YUV,"YUV")
+    log_results_json(path_model+file,fold,l_score_ensemble_weigthed,"ensemble_weigthed")
+    log_results_json(path_model+file,fold,l_score_ensemble_unweigthed,"ensemble_unweigthed")
+
+
+    # with open(path_model+file,'a') as f : 
+    #     f.write(fold)
+    #     f.write(str(l_score_normal))
+    #     f.write(str(l_score_HSV))
+    #     f.write(str(l_score_YUV))
+    #     f.write(str(l_score_ensemble_weigthed))
+    #     f.write(str(l_score_ensemble_unweigthed))
