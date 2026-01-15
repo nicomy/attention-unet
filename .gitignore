@@ -17,3 +17,5 @@ Pipfile
 test.py
 
 Pipfile.lock
+
+results_images*

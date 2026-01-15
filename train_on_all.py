@@ -16,6 +16,8 @@ from utils.evaluation.mean_iou import mean_iou_score, mean_iou_score_ensemble
 import json
 
 path_model ="models_training_all_dataset/"
+
+prefix = "only_diadem_"
 file = "results.txt"
 
 
@@ -130,6 +132,9 @@ train_idx = indices[val_size:]
 X_train, y_train = X[train_idx], y[train_idx]
 X_val, y_val = X[val_idx], y[val_idx]
 
+X_val = img_test 
+y_val = labels_test
+
 
 X_train_image_normal = process_x2(X)
 y_train_image_normal  = process_y2(y, cat = True )
@@ -175,6 +180,8 @@ VALIDATION_STEPS = len(X_val) // args.batch
 
 
 
+
+
 dice_loss = sm.losses.DiceLoss(class_weights=np.array([0.20, 0.20, 0.20, 0.20,0.20]))
 focal_loss = sm.losses.CategoricalFocalLoss()
 total_loss = dice_loss + (1 * focal_loss)
@@ -192,6 +199,7 @@ train_YUV , val_YUV = further_process(X_train_image_YUV,y_train_image_YUV,X_val_
 epochs =  args.epochs
 lr = args.lr
 
+print("Normal model : \¬\¬###################################### ")
 model_arc_normal = build_unet((256,256, 3),loss = total_loss , lr = lr , metrics = metrics )
 model_arc_normal.fit(train_normal,
             validation_data=val_normal,
@@ -200,15 +208,20 @@ model_arc_normal.fit(train_normal,
             epochs=epochs,
             )
 
+
+
+print("Normal score : ")
 l_score_normal =  mean_iou_score(model_arc_normal,X_test_image_normal,y_test_image_normal,5)
+print(l_score_normal)
 
-
-model_arc_normal.save(path_model+"unet_normal.h5")
-model_arc_normal.save_weights(f"models/unet_normal.weights.h5")
+model_arc_normal.save(path_model+prefix+"unet_normal.h5")
+model_arc_normal.save_weights(path_model+prefix+f"unet_normal.weights.h5")
 
 
 
 ### HSV model 
+print("HSV model : \¬\¬###################################### ")
+
 model_arc_HSV = build_unet((256,256, 3),loss = total_loss , lr = lr , metrics = metrics )
 
 model_arc_HSV.fit(train_HSV,
@@ -218,13 +231,18 @@ model_arc_HSV.fit(train_HSV,
             epochs=epochs,
             )
 
-model_arc_HSV.save(path_model+"unet_hsv.h5")
-model_arc_HSV.save_weights(f"models/unet_HSV.weights.h5")
+model_arc_HSV.save(path_model+prefix+"unet_hsv.h5")
+model_arc_HSV.save_weights(path_model+prefix+f"unet_HSV.weights.h5")
 
+
+print("HSV score : ")
 l_score_HSV =  mean_iou_score(model_arc_HSV,X_test_image_HSV,y_test_image_HSV,5)
+print(l_score_HSV)
+
 
 #### YUV model 
 
+print("YUV model : \¬\¬###################################### ")
 
 model_arc_YUV = build_unet((256,256, 3),loss = total_loss , lr = lr , metrics = metrics )
 
@@ -236,12 +254,12 @@ model_arc_YUV.fit(train_YUV,
             )
 
 
-model_arc_YUV.save(path_model+"unet_yuv.h5")
-
-model_arc_YUV.save_weights(f"models/unet_YUV.weights.h5")
+model_arc_YUV.save(path_model+prefix+"unet_yuv.h5")
+model_arc_YUV.save_weights(path_model+prefix+f"unet_YUV.weights.h5")
+print("YUV score : ")
 
 l_score_YUV = mean_iou_score(model_arc_YUV,X_test_image_YUV,y_test_image_YUV,5)
-
+print(l_score_YUV)
 
 
 
@@ -326,10 +344,10 @@ l_score_ensemble_unweigthed = mean_iou_score_ensemble(un_weighted_ensemble_predi
 
 # file = "results.txt"
 
-fold = 0 
-# print(l_score_normal)
-log_results_json(path_model+file,fold,l_score_normal,"normal")
-log_results_json(path_model+file,fold,l_score_HSV,"HSV")
-log_results_json(path_model+file,fold,l_score_YUV,"YUV")
-log_results_json(path_model+file,fold,l_score_ensemble_weigthed,"ensemble_weigthed")
-log_results_json(path_model+file,fold,l_score_ensemble_unweigthed,"ensemble_unweigthed")
+# fold = 0 
+# # print(l_score_normal)
+# log_results_json(path_model+prefix+file,fold,l_score_normal,"normal")
+# log_results_json(path_model+prefix+file,fold,l_score_HSV,"HSV")
+# log_results_json(path_model+prefix+file,fold,l_score_YUV,"YUV")
+# log_results_json(path_model+prefix+file,fold,l_score_ensemble_weigthed,"ensemble_weigthed")
+# log_results_json(path_model+prefix+file,fold,l_score_ensemble_unweigthed,"ensemble_unweigthed")
